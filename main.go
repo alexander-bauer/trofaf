@@ -12,12 +12,13 @@ import (
 // This structure holds the command-line options.
 type options struct {
 	Port             int    `short:"p" long:"port" description:"the port to use for the web server" default:"9000"`
-	GenOnly          bool   `short:"g" long:"generate-only" description:"generate the static site and exit"`
-	NoGen            bool   `short:"G" long:"no-generation" description:"when set, the site is not automatically generated"`
+	GenOnly          bool   `short:"g" long:"generate-only" description:"generate the static site and exit" json:"-"`
+	NoGen            bool   `short:"G" long:"no-generation" description:"when set, the site is not automatically generated" json:"-"`
 	SiteName         string `short:"n" long:"site-name" description:"the name of the site" default:"Site Name"`
 	TagLine          string `short:"t" long:"tag-line" description:"the site's tag line"`
 	RecentPostsCount int    `short:"r" long:"recent-posts" description:"the number of recent posts to send to the templates" default:"5"`
 	BaseURL          string `short:"b" long:"base-url" description:"the base URL of the web site" default:"http://localhost"`
+	SaveOptions      bool   `long:"save-options" description:"create options.json in the current directory with current options" json:"-"`
 }
 
 var (
@@ -57,6 +58,20 @@ func main() {
 	// Parse the flags
 	_, err := flags.Parse(&Options)
 	if err == nil { // err != nil prints the usage automatically
+		if Options.SaveOptions {
+			err = Options.Save(DefaultOptionsPath)
+			if err != nil {
+				log.Fatal("FATAL ", err)
+			} else {
+				return
+			}
+		}
+		// Load the options.json file in the current directory if
+		// possible, and include those options in the current set.
+		if err = Options.Load(DefaultOptionsPath); err != nil {
+			log.Fatal("FATAL ", err)
+		}
+
 		storeRssURL()
 		if !Options.NoGen {
 			// Generate the site
