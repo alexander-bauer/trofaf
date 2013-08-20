@@ -30,6 +30,13 @@ var (
 	}
 )
 
+// These variables are used in by blackfriday, and can be modified to add additional
+// extensions.
+var (
+	BLACKFRIDAY_HTML_FLAGS = 0
+	BLACKFRIDAY_EXTENSIONS = blackfriday.EXTENSION_FOOTNOTES
+)
+
 // The TemplateData structure contains all the relevant information passed to the
 // template to generate the static HTML file.
 type TemplateData struct {
@@ -157,10 +164,36 @@ func newLongPost(fi os.FileInfo) (*LongPost, error) {
 	if err = s.Err(); err != nil {
 		return nil, err
 	}
-	res := blackfriday.MarkdownCommon(buf.Bytes())
+	res := markdown(buf.Bytes())
 	lp := &LongPost{
 		sp,
 		template.HTML(res),
 	}
 	return lp, nil
+}
+
+// markdown invokes blackfriday with an appropriate set of flags and
+// extensions.
+func markdown(input []byte) []byte {
+	// Invoking blackfriday.Markdown directly gives us much greater
+	// flexibilty with the flags and extensions. Largely, this
+	// emulates blackfriday.MarkdownCommon, but includes any others
+	// that are enabled.
+	htmlFlags := blackfriday.HTML_USE_XHTML |
+		blackfriday.HTML_USE_SMARTYPANTS |
+		blackfriday.HTML_SMARTYPANTS_FRACTIONS |
+		blackfriday.HTML_SMARTYPANTS_LATEX_DASHES |
+		blackfriday.HTML_SKIP_SCRIPT |
+		BLACKFRIDAY_HTML_FLAGS
+	renderer := blackfriday.HtmlRenderer(htmlFlags, "", "")
+
+	extensions := blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
+		blackfriday.EXTENSION_TABLES |
+		blackfriday.EXTENSION_FENCED_CODE |
+		blackfriday.EXTENSION_AUTOLINK |
+		blackfriday.EXTENSION_STRIKETHROUGH |
+		blackfriday.EXTENSION_SPACE_HEADERS |
+		BLACKFRIDAY_EXTENSIONS
+
+	return blackfriday.Markdown(input, renderer, extensions)
 }
